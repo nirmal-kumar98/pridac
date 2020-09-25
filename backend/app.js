@@ -10,6 +10,9 @@ const app = express();
 const category = require('./routes/category');
 const projects = require('./routes/project');
 const users = require('./routes/users');
+const teams = require('./routes/teams');
+const home = require('./routes/home');
+
 
 mongoose.connect('mongodb+srv://clixters:clixters@2020@cluster0.a9ouy.mongodb.net/pridac-Admin?retryWrites=true&w=majority', {useNewUrlParser: true,  useUnifiedTopology: true})
     .then(() => {
@@ -38,5 +41,7 @@ app.use((req, res, next) => {
 app.use('/api/category', category);
 app.use('/api/projects', projects);
 app.use('/api/users', users);
+app.use('/api/teams', teams);
+app.use('/api/home', home);
 
 module.exports = app;
