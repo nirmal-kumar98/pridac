@@ -9,6 +9,9 @@ var generator = require('generate-password');
 
 // Models
 const Users = require('../models/users');
+const Teams = require('../models/teams');
+const Activity = require('../models/activity');
+
 const checkAuth = require('../middleware/check-auth');
 const { restart } = require('nodemon');
 
@@ -220,6 +223,18 @@ router.post('/signup', (req, res, next) => {
                   console.log(error);
                 } else {
                   console.log('Email sent successfully '+ url);
+
+                  const activity = new Activity({
+                    user: result._id,
+                    email_id: result.email_id,
+                    activity: {
+                        date: req.body.created_ts,
+                        operation: `Created Account`,
+                        title: `Created For ${ req.body.first_name }`,
+                    }
+                })
+                activity.save();
+
                   res.status(201).json({
                     message: 'User Created',
                     result: result
@@ -271,7 +286,8 @@ router.post('/login', (req, res, next) => {
                 res.status(200).json({
                     token: token,
                     expiresIn: 3600,
-                    userId: fetchUser._id
+                    userId: fetchUser._id,
+                    role: fetchUser.user_type
                 });
             } else if (fetchUser.verified === false) {
                 res.status(200).json({
@@ -323,7 +339,16 @@ router.post('/confirmation', (req, res, next) => {
 
 router.get('', checkAuth, (req, res, next) => {
 
-    Users.findById(req.userData.userId).then(user => {
+    Users.findById(req.userData.userId)
+    .populate(
+      {
+        path: 'teams',
+        populate: {
+          path: 'created_by'
+        }
+      }
+    )
+    .then(user => {
         res.status(201)
             .json({
                 message: 'User Fetched Successfully',
@@ -347,13 +372,31 @@ router.post('/update', checkAuth, upload.single('profile_pic'), (req, res, next)
         'updated_date': req.body.updated_date
       }
     })
-    .then(user => {
-      res.status(200).json({
-        message: 'Updated Successfully',
-        result: user
-      })
-    })
+    .then(users => {
 
+      Activity.find({ user: req.userData.userId })
+            .then(user => {
+
+              console.log(user);
+
+                  user[0].activity.push({
+                    date: req.body.updated_date,
+                    operation: `Updated`,
+                    title: `${ req.userData.email }'s Profile Picture Updated`,
+                })
+
+              user[0].save()
+                .then(() => {
+
+                  res.status(200).json({
+                    message: 'Updated Successfully',
+                    result: users
+                  })
+
+                })
+
+          });
+     });
 });
 
 
@@ -571,6 +614,43 @@ router.post('/members', checkAuth, upload.single('profile_pic'), (req, res, next
                 console.log(error);
               } else {
                 console.log('Email sent successfully '+ url);
+
+                Activity.find({ user: req.userData.userId })
+                  .then(user => {
+
+                user[0].activity.push({
+                  date: req.body.created_date,
+                  operation: `Created Account`,
+                  title: `Created Account For ${ req.body.email_id }`,
+              })
+              user[0].save().then(() => {
+
+                const activity = new Activity({
+                  user: result._id,
+                  email_id: result.email_id,
+                  activity: {
+                      date: req.body.created_date,
+                      operation: `Account Created`,
+                      title: `Your Account Created by ${ req.userData.email }`,
+                  }
+              })
+              activity.save();
+
+
+              });
+
+            })
+              //   const activity = new Activity({
+              //     user: req.userData.userId,
+              //     email_id: req.userData.email,
+              //     activity: {
+              //         date: req.body.created_ts,
+              //         operation: `Created Account`,
+              //         title: `Created For ${ req.body.first_name }`,
+              //     }
+              // })
+              // activity.save();
+
                 res.status(201).json({
                   message: 'User Created',
                   result: result
@@ -610,6 +690,57 @@ router.get('/:id', checkAuth, (req, res, next) => {
         });
     });
 
+});
+
+
+router.delete('/:id/:date', checkAuth, (req, res, next) => {
+
+  // console.log(req.params.id);
+    Teams.find()
+      .then(teams => {
+        // console.log(teams.length);
+        for(var i in teams) {
+          console.log(teams[i].members);
+          const memberIds = teams[i].members.filter(x => String(x) !== req.params.id);
+          console.log(memberIds);
+          teams[i].members = memberIds;
+          teams[i].save();
+        }
+
+        Users.findById(req.params.id)
+        .then(users => {
+          
+          Activity.find({ user: req.userData.userId })
+            .then(user => {
+
+              console.log(user);
+
+                user[0].activity.push({
+                  date: req.params.date,
+                  operation: `Account Deleted`,
+                  title: `${ users.email_id }'s Account Deleted`,
+              })
+              user[0].save()
+                .then(() => {
+
+                Users.deleteOne({ _id: req.params.id})
+                  .then(document => {
+
+                    res.status(200)
+                      .json({
+                        message: 'Members Deleted Successfully',
+                        result: document
+                      });
+                  });
+              });
+
+                });
+            });
+
+
+        });
+
+        
 });
 
 module.exports = router;

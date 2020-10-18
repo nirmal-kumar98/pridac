@@ -3,18 +3,38 @@ const express = require('express');
 
 const router = express.Router();
 
-const Category = require('../models/category');
+const checkAuth = require('../middleware/check-auth');
 
-router.post('', (req, res, next) => {
+const Category = require('../models/category');
+const Activity = require('../models/activity');
+
+
+router.post('/:date', checkAuth, (req, res, next) => {
     console.log(req.body);
     const category = new Category({
         name: req.body.name
     })
     category.save()
         .then((document) => {
-            res.status(201).json({
-                message: 'Category Added Successfully',
-                result: document
+
+            Activity.find({ user: req.userData.userId })
+            .then(user => {
+
+              console.log(user);
+
+                user[0].activity.push({
+                  date: req.params.date,
+                  operation: `New Category Created`,
+                  title: `${ req.body.name } Category created by ${ req.userData.email }`,
+              })
+              user[0].save()
+                .then(() => {
+
+                    res.status(201).json({
+                        message: 'Category Added Successfully',
+                        result: document
+                    })
+                })
             })
         });
 });

@@ -14,7 +14,8 @@ const users = mongoose.Schema({
     created_date: { type: String, required: true},
     updated_date: { type: String, required: false},
     profile_pic: { type: String, required: false, default: 'https://www.uokpl.rs/fpng/f/426-4262792_default-avatar-png.png'},
-    password_modified_date: { type: String, required: false }
+    password_modified_date: { type: String, required: false },
+    teams: [ { type: mongoose.Schema.Types.ObjectId, ref: 'Teams' } ]
 });
 
 users.plugin(uniqueValidator);

@@ -5,6 +5,7 @@ const multer = require('multer');
 
 const Projects = require('../models/projects');
 const Category = require('../models/category');
+const Activity = require('../models/activity');
 
 const singleStorage = multer.diskStorage({
     destination: (req, file, callBack) => {
@@ -64,6 +65,30 @@ router.post('', checkAuth, upload.single('image'), (req, res, next) => {
                         });
                 });
         });
+
+        Activity.find({ user: req.userData.userId })
+            .then(user => {
+                console.log('user', user);
+                if (user.length === 0) {
+                    const activity = new Activity({
+                        user: req.userData.userId,
+                        email_id: req.userData.email,
+                        activity: {
+                            date: req.body.created_ts,
+                            title: `Created Project`,
+                            operation: `Create New Project ${ req.body.name }, by ${ req.userData.email }`
+                        }
+                    })
+                    activity.save();
+                } else {
+                    user[0].activity.push({
+                        date: req.body.created_ts,
+                        title: ` Create New Project ${ req.body.name }, by ${ req.userData.email }`,
+                        operation: `Created Project`
+                    })
+                    user[0].save();
+                }
+            })
 });
 
 router.get('', checkAuth, (req, res, next) => {
@@ -89,7 +114,7 @@ router.get('/:id', checkAuth, (req, res, next) => {
 });
 
 
-router.post('/:id/images',checkAuth, mulitpleUpload.array('files'), (req, res, next) => {
+router.post('/:id/images/:date',checkAuth, mulitpleUpload.array('files'), (req, res, next) => {
     var urls = [];
     const url = req.protocol + '://' + req.get('host');
 
@@ -103,19 +128,69 @@ router.post('/:id/images',checkAuth, mulitpleUpload.array('files'), (req, res, n
         { $set: { 'images': urls}}
     )
     .then(documents => {
-        res.status(200).json({
-            message: 'ok',
-            result: documents
+
+        Projects.findById(req.params.id)
+            .then(project => {
+                // console.log(project)
+
+                Activity.find({ user: req.userData.userId })
+                  .then(user => {
+
+                user[0].activity.push({
+                  date: req.params.date,
+                  operation: `Uploaded Images`,
+                  title: `Images Uploaded to ${ project.name }, by  ${ req.userData.email }`,
+              });
+              user[0].save()
+                .then(() => {
+
+                    res.status(200).json({
+                        message: 'ok',
+                        result: documents
+                    });
+
+                });
+            });
         });
-    })
+    });
 });
 
-router.delete('/:id', checkAuth, (req, res, next) => {
+router.delete('/:id/:date', checkAuth, (req, res, next) => {
+    Projects.find({_id: req.params.id})
+        .then(projects => {
+            console.log(projects);
+            Activity.find({ user: req.userData.userId })
+            .then(user => {
+                console.log('user', user);
+                if (user.length === 0) {
+                    const activity = new Activity({
+                        user: req.userData.userId,
+                        email_id: req.userData.email,
+                        activity: {
+                            date: req.params.date,
+                            title: `Deleted  Project ${ projects[0].name }`
+                        }
+                    })
+                    activity.save();
+                } else {
+                    user[0].activity.push({
+                        date: req.params.date,
+                        operation: `Deleted Project`,
+                        title: `Deleted Project ${ projects[0].name }, by ${ req.userData.email }`
+                    })
+                    user[0].save();
+                }
+            })
+
+        })
+
     Projects.deleteOne({_id: req.params.id}).then((document) => {
         res.status(201).json({
             message: 'Projects Deleted Successfully',
         })
     });
+
+    
 })
 
 module.exports = router;
