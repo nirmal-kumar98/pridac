@@ -13,10 +13,11 @@ const users = require('./routes/users');
 const teams = require('./routes/teams');
 const home = require('./routes/home');
 const activity = require('./routes/activity');
+const settings = require('./routes/settings');
 
-
-mongoose.connect('mongodb+srv://clixters:clixters@2020@cluster0.a9ouy.mongodb.net/pridac-Admin?retryWrites=true&w=majority', {useNewUrlParser: true,  useUnifiedTopology: true})
-    .then(() => {
+mongoose.connect('mongodb+srv://clixters:clixters@2020@cluster0.a9ouy.mongodb.net/pridac-Admin?retryWrites=true&w=majority', 
+                    { useNewUrlParser: true,  useUnifiedTopology: true }
+    ).then(() => {
         console.log('Connected to Database!');
     })
     .catch(() => {
@@ -45,5 +46,6 @@ app.use('/api/users', users);
 app.use('/api/teams', teams);
 app.use('/api/home', home);
 app.use('/api/activity', activity);
+app.use('/api/settings', settings)
 
 module.exports = app;

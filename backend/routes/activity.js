@@ -19,4 +19,19 @@ router.get('', checkAuth, (req, res, next) => {
 
 });
 
+router.get('/:id', checkAuth, (req, res, next) => {
+  
+    Activity.find({
+        user: req.params.id
+    })
+    .then(activity => {
+        res.status(200)
+            .json({
+                message: 'Activity Fetched Successfully',
+                result: activity
+            });
+    });
+
+})
+
 module.exports = router;

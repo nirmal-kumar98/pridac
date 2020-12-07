@@ -119,4 +119,36 @@ router.delete('/:id/:date', checkAuth, (req, res, next) => {
 
 });
 
+router.post('/edit/:id/:date', checkAuth, (req, res, next) => {
+
+    Activity.find({ user: req.userData.userId })
+    .then(user => {
+
+      console.log(user);
+
+        user[0].activity.push({
+          date: req.params.date,
+          operation: `Updated Teams`,
+          title: `Team ${ req.body.name } Updated,  by ${ req.userData.email }`,
+      })
+      user[0].save()
+        .then(() => {
+
+            Teams.update({ _id: req.params.id},
+                { $set: { 'name': req.body.name,
+                           'members': req.body.members,
+                           'home': req.body.home
+                 }
+               }).then(document => {
+                 res.status(200)
+                   .json({
+                     message: 'Teams Updated Successfully',
+                     result: document
+                   });
+               });
+        });
+    });
+  
+});
+
 module.exports = router;
